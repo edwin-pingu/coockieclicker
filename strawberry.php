@@ -1,5 +1,5 @@
 <script>
-    class StrawberryClicker {
+    class CookieClicker {
         constructor() {
             // Beginwaarden en instellingen, opgeslagen in de browser
             this.score = parseInt(localStorage.getItem('score')) || 0; // Huidige score

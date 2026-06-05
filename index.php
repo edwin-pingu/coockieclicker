@@ -3,11 +3,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Strawberry Clicker</title>
-    <link href=style.css rel="stylesheet" type="text/css">
+    <title>Cookie Clicker</title>
+    <link href="style.css" rel="stylesheet" type="text/css">
 </head>
 <body>
-    <h1>Strawberry Clicker</h1>
+    <h1>Cookie Clicker</h1>
     <div id="cookie"></div>
     <p id="score">AARDBEITJES: 0</p>
     <button id="upgradeButton">Upgrade (10)</button>
@@ -30,7 +30,7 @@
  
 
     <script>
-        class StrawberryClicker {
+        class CookieClicker {
             constructor() {
                 this.score = parseInt(localStorage.getItem('score')) || 0;
                 this.clickValue = parseInt(localStorage.getItem('clickValue')) || 1;
