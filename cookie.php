@@ -151,7 +151,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            new StrawberryClicker();
+            new CookieClicker();
         });
     </script>
 </body>
