@@ -9,7 +9,7 @@
 <body>
     <h1>Cookie Clicker</h1>
     <div id="cookie"></div>
-    <p id="score">Cookies: 0</p>
+    <p id="score">Score: 0</p>
     <button id="upgradeButton">Upgrade (10)</button>
     <button id="doubleClickValueButton">Double Click Value (Cost: 150)</button>
     <button id="scoreMultiplierButton">Score Multiplier x3 (Cost: 500)</button>
@@ -30,6 +30,7 @@
  
 
     <script>
+        
         class CookieClicker {
             constructor() {
                 this.score = parseInt(localStorage.getItem('score')) || 0;
@@ -245,7 +246,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            new StrawberryClicker();
+            new CookieClicker();
         });
     </script>
 </body>
