@@ -1,158 +1,297 @@
-<script>
-    class CookieClicker {
-        constructor() {
-            // Beginwaarden en instellingen, opgeslagen in de browser
-            this.score = parseInt(localStorage.getItem('score')) || 0; // Huidige score
-            this.clickValue = parseInt(localStorage.getItem('clickValue')) || 1; // Waarde per klik
-            this.autoClickerCost = 100; // Kosten voor de Auto Clicker
-            this.autoClickerInterval = null; // Interval voor Auto Clicker
-            this.autoClickerActive = localStorage.getItem('autoClickerActive') === 'true'; // Controleren of Auto Clicker actief is
-            this.autoClickerUpgradeCosts = [200, 500, 1000, 2000]; // Kosten voor upgrades van Auto Clicker
-            this.autoClickerUpgradeLevels = [0, 0, 0, 0]; // Niveaus van Auto Clicker upgrades
-            this.upgradeCost = parseInt(localStorage.getItem('upgradeCost')) || 10; // Kosten voor basis-upgrade
-            this.upgradeMultiplier = 1.2; // Multiplier voor volgende upgrade kosten
-            this.clickMultiplier = 1.2; // Multiplier voor elke upgrade klikwaarde
-            this.upgradeCount = parseInt(localStorage.getItem('upgradeCount')) || 0; // Aantal keer geüpgraded
-            this.autoClickerCount = parseInt(localStorage.getItem('autoClickerCount')) || 0; // Aantal Auto Clickers gekocht
+class CookieClicker {
+    constructor() {
+        this.score = parseInt(localStorage.getItem('score')) || 0;
+        this.clickValue = parseInt(localStorage.getItem('clickValue')) || 1;
+        this.autoClickerCost = 100;
+        this.autoClickerInterval = null;
+        this.autoClickerActive = localStorage.getItem('autoClickerActive') === 'true';
+        this.autoClickerUpgradeCosts = [200, 500, 1000, 2000];
+        this.autoClickerUpgradeLevels = [0, 0, 0, 0];
+        this.upgradeCost = parseInt(localStorage.getItem('upgradeCost')) || 10;
+        this.upgradeMultiplier = 1.2;
+        this.clickMultiplier = 1.2;
+        this.upgradeCount = parseInt(localStorage.getItem('upgradeCount')) || 0;
+        this.autoClickerCount = parseInt(localStorage.getItem('autoClickerCount')) || 0;
 
-            // HTML elementen opslaan voor later gebruik
-            this.cookie = document.getElementById('cookie'); // Klikbare cookie
-            this.scoreElement = document.getElementById('score'); // Scoreweergave
-            this.upgradeButton = document.getElementById('upgradeButton'); // Upgrade knop
-            this.doubleClickValueButton = document.getElementById('doubleClickValueButton'); // Dubbel klikwaarde knop
-            this.scoreMultiplierButton = document.getElementById('scoreMultiplierButton'); // Vermenigvuldiger knop
-            this.extraBonusButton = document.getElementById('extraBonusButton'); // Extra bonus knop
-            this.speedBoostButton = document.getElementById('speedBoostButton'); // Snelheidsboost knop
-            this.doubleClickValueCost = 150; // Kosten voor dubbele klikwaarde
-            this.scoreMultiplierCost = 500; // Kosten voor score vermenigvuldiger
-            this.extraBonusCost = 300; // Kosten voor extra bonus
-            this.speedBoostCost = 250; // Kosten voor snelheidsboost
-            this.isSpeedBoostActive = false; // Checkt of snelheidsboost actief is
-            this.autoClickerButton = document.getElementById('autoClickerButton'); // Auto Clicker knop
-            this.disableAutoClickerButton = document.getElementById('disableAutoClickerButton'); // Knop om Auto Clicker uit te schakelen
-            this.resetButton = document.getElementById('resetButton'); // Resetknop
-            this.upgradeCountElement = document.getElementById('upgradeCount'); // Telt aantal upgrades
-            this.autoClickerCountElement = document.getElementById('autoClickerCount'); // Telt aantal Auto Clickers
+        this.cookie = document.getElementById('cookie');
+        this.scoreElement = document.getElementById('score');
+        this.upgradeButton = document.getElementById('upgradeButton');
+        this.doubleClickValueButton = document.getElementById('doubleClickValueButton');
+        this.scoreMultiplierButton = document.getElementById('scoreMultiplierButton');
+        this.extraBonusButton = document.getElementById('extraBonusButton');
+        this.speedBoostButton = document.getElementById('speedBoostButton');
+        this.doubleClickValueCost = 150;
+        this.scoreMultiplierCost = 500;
+        this.extraBonusCost = 300;
+        this.speedBoostCost = 250;
+        this.isSpeedBoostActive = false;
+        this.autoClickerButton = document.getElementById('autoClickerButton');
+        this.disableAutoClickerButton = document.getElementById('disableAutoClickerButton');
+        this.resetButton = document.getElementById('resetButton');
+        this.upgradeCountElement = document.getElementById('upgradeCount');
+        this.autoClickerCountElement = document.getElementById('autoClickerCount');
 
-            // UI bijwerken en event listeners toevoegen
-            this.updateUI();
-            this.addEventListeners();
+        this.autoClickerUpgradeButtons = [
+            document.getElementById('autoClickerUpgrade1'),
+            document.getElementById('autoClickerUpgrade2'),
+            document.getElementById('autoClickerUpgrade3'),
+            document.getElementById('autoClickerUpgrade4')
+        ];
 
-            // Start Auto Clicker als deze al actief was bij vorige sessie
-            if (this.autoClickerActive) {
-                this.startAutoClicker();
+        this.displayedScore = this.score;
+        this.scoreAnimationFrame = null;
+
+        this.updateUI();
+        this.addEventListeners();
+
+        if (this.autoClickerActive) {
+            this.startAutoClicker();
+        }
+    }
+
+    beautifyCookies(value) {
+        value = Number(value) || 0;
+
+        if (!isFinite(value)) {
+            return 'Infinity';
+        }
+
+        const units = [
+            '',
+            ' thousand',
+            ' million',
+            ' billion',
+            ' trillion',
+            ' quadrillion',
+            ' quintillion',
+            ' sextillion',
+            ' septillion',
+            ' octillion',
+            ' nonillion'
+        ];
+
+        const negative = value < 0;
+        let absValue = Math.abs(value);
+
+        if (absValue < 1000) {
+            return (negative ? '-' : '') + absValue.toLocaleString('en-US');
+        }
+
+        let unitIndex = 0;
+        while (absValue >= 1000 && unitIndex < units.length - 1) {
+            absValue /= 1000;
+            unitIndex++;
+        }
+
+        const decimals = absValue < 10 ? 3 : absValue < 100 ? 3 : absValue < 1000 ? 3 : 0;
+        const formatted = absValue.toFixed(decimals).replace(/\.?(?:0+)$/, '');
+        return (negative ? '-' : '') + formatted + units[unitIndex];
+    }
+
+    updateUI() {
+        this.scoreElement.textContent = 'Score: ' + this.beautifyCookies(this.displayedScore);
+        this.upgradeButton.textContent = 'Upgrade (' + this.beautifyCookies(this.upgradeCost) + ')';
+        this.upgradeCountElement.textContent = this.upgradeCount;
+        this.autoClickerCountElement.textContent = this.autoClickerCount;
+        if (this.autoClickerActive) {
+            this.autoClickerButton.textContent = 'Auto Clicker Active';
+            this.autoClickerButton.disabled = true;
+            this.disableAutoClickerButton.style.display = 'inline';
+        } else {
+            this.autoClickerButton.textContent = 'Auto Clicker (' + this.beautifyCookies(this.autoClickerCost) + ')';
+            this.autoClickerButton.disabled = false;
+            this.disableAutoClickerButton.style.display = 'none';
+        }
+        this.doubleClickValueButton.textContent = 'Double Click Value (' + this.beautifyCookies(this.doubleClickValueCost) + ')';
+        this.scoreMultiplierButton.textContent = 'Score Multiplier x3 (' + this.beautifyCookies(this.scoreMultiplierCost) + ')';
+        this.extraBonusButton.textContent = 'Extra Bonus (' + this.beautifyCookies(this.extraBonusCost) + ')';
+        this.speedBoostButton.textContent = 'Speed Boost (' + this.beautifyCookies(this.speedBoostCost) + ')';
+    }
+
+    animateScore() {
+        if (this.scoreAnimationFrame) {
+            cancelAnimationFrame(this.scoreAnimationFrame);
+        }
+
+        const startScore = this.displayedScore;
+        const targetScore = this.score;
+        const duration = 250;
+        const startTime = performance.now();
+
+        const step = (timestamp) => {
+            const elapsed = timestamp - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 2);
+            this.displayedScore = startScore + (targetScore - startScore) * eased;
+            this.scoreElement.textContent = 'Score: ' + this.beautifyCookies(Math.round(this.displayedScore));
+
+            if (progress < 1) {
+                this.scoreAnimationFrame = requestAnimationFrame(step);
+            } else {
+                this.displayedScore = targetScore;
+                this.scoreElement.textContent = 'Score: ' + this.beautifyCookies(this.score);
+                this.scoreAnimationFrame = null;
             }
-        }
+        };
 
-        updateUI() {
-            // UI elementen bijwerken om huidige spelstatus te tonen
-            this.scoreElement.textContent = 'Score: ' + this.score;
-            this.upgradeButton.textContent = 'Upgrade (' + this.upgradeCost + ')';
-            this.upgradeCountElement.textContent = this.upgradeCount;
-            this.autoClickerCountElement.textContent = this.autoClickerCount;
-            if (this.autoClickerActive) {
-                this.autoClickerButton.textContent = 'Auto Clicker Active';
-                this.autoClickerButton.disabled = true;
-                this.disableAutoClickerButton.style.display = 'inline';
-            }
-            this.doubleClickValueButton.textContent = 'Double Click Value (' + this.doubleClickValueCost + ')';
-            this.scoreMultiplierButton.textContent = 'Score Multiplier x3 (' + this.scoreMultiplierCost + ')';
-            this.extraBonusButton.textContent = 'Extra Bonus (' + this.extraBonusCost + ')';
-            this.speedBoostButton.textContent = 'Speed Boost (' + this.speedBoostCost + ')';
-        }
+        this.scoreAnimationFrame = requestAnimationFrame(step);
+    }
 
-        addEventListeners() {
-            // Event listeners koppelen aan HTML elementen
-            this.cookie.addEventListener('click', () => this.incrementScore()); // Klikken verhoogt score
-            this.upgradeButton.addEventListener('click', () => this.upgrade()); // Upgrade knop
-            this.autoClickerButton.addEventListener('click', () => this.buyAutoClicker()); // Auto Clicker kopen
-            this.disableAutoClickerButton.addEventListener('click', () => this.disableAutoClicker()); // Auto Clicker uitschakelen
-            this.resetButton.addEventListener('click', () => this.reset()); // Reset alle gegevens
-            this.doubleClickValueButton.addEventListener('click', () => this.doubleClickValue()); // Dubbel klikwaarde knop
-            this.scoreMultiplierButton.addEventListener('click', () => this.scoreMultiplier()); // Score vermenigvuldiger knop
-            this.extraBonusButton.addEventListener('click', () => this.extraBonus()); // Extra bonus knop
-            this.speedBoostButton.addEventListener('click', () => this.speedBoost()); // Snelheidsboost knop
-        }
+    addEventListeners() {
+        this.cookie.addEventListener('click', () => this.incrementScore());
+        this.upgradeButton.addEventListener('click', () => this.upgrade());
+        this.autoClickerButton.addEventListener('click', () => this.buyAutoClicker());
+        this.disableAutoClickerButton.addEventListener('click', () => this.disableAutoClicker());
+        this.resetButton.addEventListener('click', () => this.reset());
+        this.doubleClickValueButton.addEventListener('click', () => this.doubleClickValue());
+        this.scoreMultiplierButton.addEventListener('click', () => this.scoreMultiplier());
+        this.extraBonusButton.addEventListener('click', () => this.extraBonus());
+        this.speedBoostButton.addEventListener('click', () => this.speedBoost());
+    }
 
-        incrementScore() {
-            // Score verhogen bij elke klik op de 'cookie'
-            this.score += this.clickValue;
+    incrementScore() {
+        this.score += this.clickValue;
+        this.updateScore();
+    }
+
+    upgrade() {
+        if (this.score >= this.upgradeCost) {
+            this.score -= this.upgradeCost;
+            this.clickValue = Math.ceil(this.clickValue * this.clickMultiplier);
+            this.upgradeCost = Math.ceil(this.upgradeCost * this.upgradeMultiplier);
+            this.upgradeCount++;
+            this.updateScore();
+            this.updateUpgrade();
+        }
+    }
+
+    doubleClickValue() {
+        if (this.score >= this.doubleClickValueCost) {
+            this.score -= this.doubleClickValueCost;
+            this.clickValue *= 2;
             this.updateScore();
         }
+    }
 
-        upgrade() {
-            // Klikwaarde verhogen met upgrade multiplier en kosten verhogen voor volgende upgrade
-            if (this.score >= this.upgradeCost) {
-                this.score -= this.upgradeCost;
-                this.clickValue *= this.clickMultiplier;
-                this.upgradeCost *= this.upgradeMultiplier;
-                this.upgradeCount++;
-                this.updateScore();
-                this.updateUpgrade();
-            }
+    scoreMultiplier() {
+        if (this.score >= this.scoreMultiplierCost) {
+            this.score -= this.scoreMultiplierCost;
+            this.clickValue *= 3;
+            this.updateScore();
         }
+    }
 
-        doubleClickValue() {
-            // Klikwaarde verdubbelen
-            if (this.score >= this.doubleClickValueCost) {
-                this.score -= this.doubleClickValueCost;
-                this.clickValue *= 2;
-                this.updateScore();
-            }
+    extraBonus() {
+        if (this.score >= this.extraBonusCost) {
+            this.score -= this.extraBonusCost;
+            this.score += 500;
+            this.updateScore();
         }
+    }
 
-        // Andere functies zoals scoreMultiplier(), extraBonus(), speedBoost() volgen hetzelfde principe
-        // Auto Clicker: koopt en start automatische klikfunctie indien geactiveerd.
-        // Save State: slaat huidige spelstaat op in `localStorage`.
-
-        reset() {
-            // Reset spel naar standaardwaarden
-            this.score = 0;
-            this.clickValue = 1;
-            this.upgradeCost = 10;
-            this.upgradeCount = 0;
-            this.autoClickerCount = 0;
-            this.autoClickerActive = false;
-            clearInterval(this.autoClickerInterval);
+    speedBoost() {
+        if (this.score >= this.speedBoostCost && !this.isSpeedBoostActive) {
+            this.score -= this.speedBoostCost;
+            this.isSpeedBoostActive = true;
+            this.clickValue += 5;
+            this.updateScore();
+            setTimeout(() => {
+                this.clickValue -= 5;
+                this.isSpeedBoostActive = false;
                 this.updateUI();
-                this.saveState();
-            }
+            }, 10000);
+        }
+    }
 
-            updateScore() {
-                this.scoreElement.textContent = 'Score: ' + this.score;
-                localStorage.setItem('score', this.score);
-            }
+    buyAutoClicker() {
+        if (this.score >= this.autoClickerCost && !this.autoClickerActive) {
+            this.score -= this.autoClickerCost;
+            this.autoClickerActive = true;
+            this.autoClickerCount++;
+            this.startAutoClicker();
+            this.updateScore();
+            this.updateAutoClicker();
+        }
+    }
 
-            updateUpgrade() {
-                this.upgradeButton.textContent = 'Upgrade (' + this.upgradeCost + ')';
-                this.upgradeCountElement.textContent = this.upgradeCount;
-                localStorage.setItem('clickValue', this.clickValue);
-                localStorage.setItem('upgradeCost', this.upgradeCost);
-                localStorage.setItem('upgradeCount', this.upgradeCount);
-            }
+    startAutoClicker() {
+        this.autoClickerInterval = setInterval(() => {
+            this.score += this.clickValue;
+            this.updateScore();
+        }, 1000);
+    }
 
-            updateAutoClicker() {
-                this.autoClickerButton.textContent = 'Auto Clicker Active';
-                this.autoClickerButton.disabled = true;
-                this.disableAutoClickerButton.style.display = 'inline';
-                this.autoClickerCountElement.textContent = this.autoClickerCount;
-                localStorage.setItem('autoClickerActive', this.autoClickerActive);
-                localStorage.setItem('autoClickerCount', this.autoClickerCount);
-            }
+    disableAutoClicker() {
+        if (this.autoClickerActive) {
+            clearInterval(this.autoClickerInterval);
+            this.autoClickerActive = false;
+            this.autoClickerButton.textContent = 'Auto Clicker (' + this.autoClickerCost + ')';
+            this.autoClickerButton.disabled = false;
+            this.disableAutoClickerButton.style.display = 'none';
+            localStorage.setItem('autoClickerActive', this.autoClickerActive);
+        }
+    }
 
-            saveState() {
-                localStorage.setItem('score', this.score);
-                localStorage.setItem('clickValue', this.clickValue);
-                localStorage.setItem('upgradeCost', this.upgradeCost);
-                localStorage.setItem('upgradeCount', this.upgradeCount);
-                localStorage.setItem('autoClickerCount', this.autoClickerCount);
-                localStorage.setItem('autoClickerActive', this.autoClickerActive);
-            }
+    applyAutoClickerUpgrades() {
+        const upgradeMultiplier = this.autoClickerUpgradeLevels.reduce((multiplier, level) => {
+            return multiplier + level * 0.5;
+        }, 1);
+
+        if (this.autoClickerInterval) {
+            clearInterval(this.autoClickerInterval);
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            new CookieClicker();
-        });
-    </script>
-</body>
-</html>
+        this.autoClickerInterval = setInterval(() => {
+            this.score += this.clickValue * upgradeMultiplier;
+            this.updateScore();
+        }, 1000 / upgradeMultiplier);
+    }
+
+    reset() {
+        this.score = 0;
+        this.displayedScore = 0;
+        this.clickValue = 1;
+        this.upgradeCost = 10;
+        this.upgradeCount = 0;
+        this.autoClickerCount = 0;
+        this.autoClickerActive = false;
+        clearInterval(this.autoClickerInterval);
+        if (this.scoreAnimationFrame) {
+            cancelAnimationFrame(this.scoreAnimationFrame);
+            this.scoreAnimationFrame = null;
+        }
+        this.updateUI();
+        this.saveState();
+    }
+
+    updateScore() {
+        this.saveState();
+        this.animateScore();
+    }
+
+    updateUpgrade() {
+        this.upgradeButton.textContent = 'Upgrade (' + this.beautifyCookies(this.upgradeCost) + ')';
+        this.upgradeCountElement.textContent = this.upgradeCount;
+        localStorage.setItem('clickValue', this.clickValue);
+        localStorage.setItem('upgradeCost', this.upgradeCost);
+        localStorage.setItem('upgradeCount', this.upgradeCount);
+    }
+
+    updateAutoClicker() {
+        this.autoClickerButton.textContent = 'Auto Clicker Active';
+        this.autoClickerButton.disabled = true;
+        this.disableAutoClickerButton.style.display = 'inline';
+        this.autoClickerCountElement.textContent = this.autoClickerCount;
+        localStorage.setItem('autoClickerActive', this.autoClickerActive);
+        localStorage.setItem('autoClickerCount', this.autoClickerCount);
+    }
+
+    saveState() {
+        localStorage.setItem('score', this.score);
+        localStorage.setItem('clickValue', this.clickValue);
+        localStorage.setItem('upgradeCost', this.upgradeCost);
+        localStorage.setItem('upgradeCount', this.upgradeCount);
+        localStorage.setItem('autoClickerCount', this.autoClickerCount);
+        localStorage.setItem('autoClickerActive', this.autoClickerActive);
+    }
+}
