@@ -12,9 +12,12 @@ class CookieClicker {
         this.clickMultiplier = 1.2;
         this.upgradeCount = parseInt(localStorage.getItem('upgradeCount')) || 0;
         this.autoClickerCount = parseInt(localStorage.getItem('autoClickerCount')) || 0;
+        this.cps = parseFloat(localStorage.getItem('cps')) || 0;
 
         this.cookie = document.getElementById('cookie');
         this.scoreElement = document.getElementById('score');
+        this.cpsElement = document.getElementById('cps');
+        this.playArea = document.getElementById('playArea');
         this.upgradeButton = document.getElementById('upgradeButton');
         this.doubleClickValueButton = document.getElementById('doubleClickValueButton');
         this.scoreMultiplierButton = document.getElementById('scoreMultiplierButton');
@@ -31,18 +34,44 @@ class CookieClicker {
         this.upgradeCountElement = document.getElementById('upgradeCount');
         this.autoClickerCountElement = document.getElementById('autoClickerCount');
 
-        this.autoClickerUpgradeButtons = [
-            document.getElementById('autoClickerUpgrade1'),
-            document.getElementById('autoClickerUpgrade2'),
-            document.getElementById('autoClickerUpgrade3'),
-            document.getElementById('autoClickerUpgrade4')
+        this.buildings = [
+            { name: 'Chocolate chip cookie', baseCost: 100, cost: 0, cps: 0.1, count: parseInt(localStorage.getItem('building_0')) || 0 },
+            { name: 'Kaneelkoekje', baseCost: 500, cost: 0, cps: 0.5, count: parseInt(localStorage.getItem('building_1')) || 0 },
+            { name: 'Boterkoekje', baseCost: 1000, cost: 0, cps: 1, count: parseInt(localStorage.getItem('building_2')) || 0 },
+            { name: 'Bastognekoekie', baseCost: 1500, cost: 0, cps: 1.5, count: parseInt(localStorage.getItem('building_3')) || 0 },
+            { name: 'Chocoladekoekje', baseCost: 2000, cost: 0, cps: 2, count: parseInt(localStorage.getItem('building_4')) || 0 },
+            { name: 'Gevulde koekie', baseCost: 2500, cost: 0, cps: 2.5, count: parseInt(localStorage.getItem('building_5')) || 0 }
         ];
 
+        this.buildings.forEach(function(building) {
+            building.cost = Math.ceil(building.baseCost * Math.pow(1.15, building.count));
+        });
+
+        this.buildingButtons = [
+            document.getElementById('buildingButton0'),
+            document.getElementById('buildingButton1'),
+            document.getElementById('buildingButton2'),
+            document.getElementById('buildingButton3'),
+            document.getElementById('buildingButton4'),
+            document.getElementById('buildingButton5')
+        ];
+        this.buildingCountElements = [
+            document.getElementById('buildingCount0'),
+            document.getElementById('buildingCount1'),
+            document.getElementById('buildingCount2'),
+            document.getElementById('buildingCount3'),
+            document.getElementById('buildingCount4'),
+            document.getElementById('buildingCount5')
+        ];
+
+        this.productionInterval = null;
         this.displayedScore = this.score;
         this.scoreAnimationFrame = null;
 
+        this.calculateCPS();
         this.updateUI();
         this.addEventListeners();
+        this.startProduction();
 
         if (this.autoClickerActive) {
             this.startAutoClicker();
@@ -74,7 +103,8 @@ class CookieClicker {
         let absValue = Math.abs(value);
 
         if (absValue < 1000) {
-            return (negative ? '-' : '') + absValue.toLocaleString('en-US');
+            const smallValue = absValue % 1 === 0 ? absValue.toLocaleString('en-US') : absValue.toFixed(2).replace(/\.?(?:0+)$/, '');
+            return (negative ? '-' : '') + smallValue;
         }
 
         let unitIndex = 0;
@@ -89,7 +119,12 @@ class CookieClicker {
     }
 
     updateUI() {
-        this.scoreElement.textContent = 'Score: ' + this.beautifyCookies(this.displayedScore);
+        if (this.scoreElement) {
+            this.scoreElement.textContent = 'Score: ' + this.beautifyCookies(this.displayedScore);
+        }
+        if (this.cpsElement) {
+            this.cpsElement.textContent = 'CPS: ' + this.beautifyCookies(this.cps);
+        }
         this.upgradeButton.textContent = 'Upgrade (' + this.beautifyCookies(this.upgradeCost) + ')';
         this.upgradeCountElement.textContent = this.upgradeCount;
         this.autoClickerCountElement.textContent = this.autoClickerCount;
@@ -106,6 +141,57 @@ class CookieClicker {
         this.scoreMultiplierButton.textContent = 'Score Multiplier x3 (' + this.beautifyCookies(this.scoreMultiplierCost) + ')';
         this.extraBonusButton.textContent = 'Extra Bonus (' + this.beautifyCookies(this.extraBonusCost) + ')';
         this.speedBoostButton.textContent = 'Speed Boost (' + this.beautifyCookies(this.speedBoostCost) + ')';
+        this.updateBuildings();
+    }
+
+    calculateCPS() {
+        this.cps = this.buildings.reduce(function(sum, building) {
+            return sum + building.cps * building.count;
+        }, 0);
+    }
+
+    startProduction() {
+        if (this.productionInterval) {
+            clearInterval(this.productionInterval);
+        }
+
+        this.productionInterval = setInterval(function() {
+            if (this.cps > 0) {
+                this.score += this.cps;
+                this.updateScore();
+            }
+        }.bind(this), 1000);
+    }
+
+    buyBuilding(index) {
+        var building = this.buildings[index];
+        if (this.score >= building.cost) {
+            this.score -= building.cost;
+            building.count++;
+            building.cost = Math.ceil(building.baseCost * Math.pow(1.15, building.count));
+            this.calculateCPS();
+            if (!this.productionInterval) {
+                this.startProduction();
+            }
+            this.updateScore();
+            this.updateBuildings();
+            this.saveState();
+        }
+    }
+
+    updateBuildings() {
+        for (var i = 0; i < this.buildings.length; i++) {
+            var building = this.buildings[i];
+            var button = this.buildingButtons[i];
+            var countEl = this.buildingCountElements[i];
+            if (button) {
+                button.textContent = building.name + ' (' + this.beautifyCookies(building.cost) + ')';
+                button.disabled = this.score < building.cost;
+            }
+            if (countEl) {
+                countEl.textContent = building.count;
+            }
+        }
     }
 
     animateScore() {
@@ -147,11 +233,34 @@ class CookieClicker {
         this.scoreMultiplierButton.addEventListener('click', () => this.scoreMultiplier());
         this.extraBonusButton.addEventListener('click', () => this.extraBonus());
         this.speedBoostButton.addEventListener('click', () => this.speedBoost());
+        for (var i = 0; i < this.buildingButtons.length; i++) {
+            if (this.buildingButtons[i]) {
+                this.buildingButtons[i].addEventListener('click', this.buyBuilding.bind(this, i));
+            }
+        }
     }
 
     incrementScore() {
         this.score += this.clickValue;
+        this.showClickPopup(this.clickValue);
         this.updateScore();
+    }
+
+    showClickPopup(amount) {
+        if (!this.playArea) return;
+        var popup = document.createElement('div');
+        popup.className = 'click-popup';
+        popup.textContent = '+' + this.beautifyCookies(amount);
+        this.playArea.appendChild(popup);
+        requestAnimationFrame(function() {
+            popup.classList.add('visible');
+        });
+        setTimeout(function() {
+            popup.classList.remove('visible');
+            setTimeout(function() {
+                if (popup.parentNode) popup.parentNode.removeChild(popup);
+            }, 300);
+        }, 400);
     }
 
     upgrade() {
@@ -255,6 +364,11 @@ class CookieClicker {
         this.upgradeCount = 0;
         this.autoClickerCount = 0;
         this.autoClickerActive = false;
+        this.buildings.forEach(function(building) {
+            building.count = 0;
+            building.cost = building.baseCost;
+        });
+        this.calculateCPS();
         clearInterval(this.autoClickerInterval);
         if (this.scoreAnimationFrame) {
             cancelAnimationFrame(this.scoreAnimationFrame);
@@ -266,6 +380,7 @@ class CookieClicker {
 
     updateScore() {
         this.saveState();
+        this.updateUI();
         this.animateScore();
     }
 
@@ -293,5 +408,9 @@ class CookieClicker {
         localStorage.setItem('upgradeCount', this.upgradeCount);
         localStorage.setItem('autoClickerCount', this.autoClickerCount);
         localStorage.setItem('autoClickerActive', this.autoClickerActive);
+        localStorage.setItem('cps', this.cps);
+        for (var i = 0; i < this.buildings.length; i++) {
+            localStorage.setItem('building_' + i, this.buildings[i].count);
+        }
     }
 }
