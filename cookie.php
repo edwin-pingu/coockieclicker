@@ -15,13 +15,20 @@ class CookieClicker {
         this.upgradeButton = document.getElementById('upgradeButton');
         this.doubleClickValueButton = document.getElementById('doubleClickValueButton');
         this.scoreMultiplierButton = document.getElementById('scoreMultiplierButton');
-        this.extraBonusButton = document.getElementById('extraBonusButton');
-        this.speedBoostButton = document.getElementById('speedBoostButton');
+        this.megaKlikButton = document.getElementById('megaKlikButton');
+        this.comboClickerButton = document.getElementById('comboClickerButton');
         this.doubleClickValueCost = 150;
         this.scoreMultiplierCost = 500;
-        this.extraBonusCost = 300;
-        this.speedBoostCost = 250;
-        this.isSpeedBoostActive = false;
+        this.megaKlikCost = 300;
+        this.comboClickerCost = 250;
+        this.upgradePurchased = localStorage.getItem('upgradePurchased') === 'true';
+        this.doubleClickValuePurchased = localStorage.getItem('doubleClickValuePurchased') === 'true';
+        this.scoreMultiplierPurchased = localStorage.getItem('scoreMultiplierPurchased') === 'true';
+        this.megaKlikPurchased = localStorage.getItem('megaKlikPurchased') === 'true';
+        this.comboClickerPurchased = localStorage.getItem('comboClickerPurchased') === 'true' || localStorage.getItem('speedBoostPurchased') === 'true';
+        this.clickCount = parseInt(localStorage.getItem('clickCount')) || 0;
+        this.lastClickTime = 0;
+        this.comboChain = 0;
         this.resetButton = document.getElementById('resetButton');
         this.upgradeCountElement = document.getElementById('upgradeCount');
 
@@ -112,12 +119,52 @@ class CookieClicker {
         if (this.cpsElement) {
             this.cpsElement.textContent = 'CPS: ' + this.beautifyCookies(this.cps);
         }
-        this.upgradeButton.textContent = 'Upgrade (' + this.beautifyCookies(this.upgradeCost) + ')';
+        if (this.upgradeButton) {
+            if (this.upgradePurchased) {
+                this.upgradeButton.style.display = 'none';
+            } else {
+                this.upgradeButton.style.display = '';
+                this.upgradeButton.textContent = 'Upgrade (' + this.beautifyCookies(this.upgradeCost) + ')';
+            }
+        }
+
+        if (this.doubleClickValueButton) {
+            if (this.doubleClickValuePurchased) {
+                this.doubleClickValueButton.style.display = 'none';
+            } else {
+                this.doubleClickValueButton.style.display = '';
+                this.doubleClickValueButton.textContent = 'Double Click Value (' + this.beautifyCookies(this.doubleClickValueCost) + ')';
+            }
+        }
+
+        if (this.scoreMultiplierButton) {
+            if (this.scoreMultiplierPurchased) {
+                this.scoreMultiplierButton.style.display = 'none';
+            } else {
+                this.scoreMultiplierButton.style.display = '';
+                this.scoreMultiplierButton.textContent = 'Score Multiplier x3 (' + this.beautifyCookies(this.scoreMultiplierCost) + ')';
+            }
+        }
+
+        if (this.megaKlikButton) {
+            if (this.megaKlikPurchased) {
+                this.megaKlikButton.style.display = 'none';
+            } else {
+                this.megaKlikButton.style.display = '';
+                this.megaKlikButton.textContent = 'Mega Klik (' + this.beautifyCookies(this.megaKlikCost) + ')';
+            }
+        }
+
+        if (this.comboClickerButton) {
+            if (this.comboClickerPurchased) {
+                this.comboClickerButton.style.display = 'none';
+            } else {
+                this.comboClickerButton.style.display = '';
+                this.comboClickerButton.textContent = 'Combo Clicker (' + this.beautifyCookies(this.comboClickerCost) + ')';
+            }
+        }
+
         this.upgradeCountElement.textContent = this.upgradeCount;
-        this.doubleClickValueButton.textContent = 'Double Click Value (' + this.beautifyCookies(this.doubleClickValueCost) + ')';
-        this.scoreMultiplierButton.textContent = 'Score Multiplier x3 (' + this.beautifyCookies(this.scoreMultiplierCost) + ')';
-        this.extraBonusButton.textContent = 'Extra Bonus (' + this.beautifyCookies(this.extraBonusCost) + ')';
-        this.speedBoostButton.textContent = 'Speed Boost (' + this.beautifyCookies(this.speedBoostCost) + ')';
         this.updateBuildings();
     }
 
@@ -206,8 +253,8 @@ class CookieClicker {
         this.resetButton.addEventListener('click', () => this.reset());
         this.doubleClickValueButton.addEventListener('click', () => this.doubleClickValue());
         this.scoreMultiplierButton.addEventListener('click', () => this.scoreMultiplier());
-        this.extraBonusButton.addEventListener('click', () => this.extraBonus());
-        this.speedBoostButton.addEventListener('click', () => this.speedBoost());
+        this.megaKlikButton.addEventListener('click', () => this.megaKlik());
+        this.comboClickerButton.addEventListener('click', () => this.comboClicker());
         for (var i = 0; i < this.buildingButtons.length; i++) {
             if (this.buildingButtons[i]) {
                 this.buildingButtons[i].addEventListener('click', this.buyBuilding.bind(this, i));
@@ -216,8 +263,34 @@ class CookieClicker {
     }
 
     incrementScore() {
-        this.score += this.clickValue;
-        this.showClickPopup(this.clickValue);
+        var baseAmount = this.clickValue;
+        this.clickCount++;
+        var bonus = 0;
+
+        if (this.megaKlikPurchased && this.clickCount % 10 === 0) {
+            bonus += this.clickValue * 10;
+        }
+
+        var now = Date.now();
+        if (this.comboClickerPurchased && now - this.lastClickTime <= 700) {
+            this.comboChain++;
+        } else {
+            this.comboChain = 1;
+        }
+
+        this.lastClickTime = now;
+
+        if (this.comboClickerPurchased && this.comboChain >= 4) {
+            // Gradual bonus: each extra click beyond 3 adds 25% of clickValue,
+            // capped at +100% (after 4 extra clicks). This yields a smooth
+            // increase instead of a large jump.
+            var extraSteps = Math.min(this.comboChain - 3, 4);
+            bonus += Math.ceil(this.clickValue * 0.25 * extraSteps);
+        }
+
+        var totalAmount = baseAmount + bonus;
+        this.score += totalAmount;
+        this.showClickPopup(totalAmount);
         this.updateScore();
     }
 
@@ -239,52 +312,62 @@ class CookieClicker {
     }
 
     upgrade() {
-        if (this.score >= this.upgradeCost) {
-            this.score -= this.upgradeCost;
-            this.clickValue = Math.ceil(this.clickValue * this.clickMultiplier);
-            this.upgradeCost = Math.ceil(this.upgradeCost * this.upgradeMultiplier);
-            this.upgradeCount++;
-            this.updateScore();
-            this.updateUpgrade();
+        if (this.upgradePurchased || this.score < this.upgradeCost) {
+            return;
         }
+
+        this.score -= this.upgradeCost;
+        this.clickValue = Math.ceil(this.clickValue * this.clickMultiplier);
+        this.upgradePurchased = true;
+        this.upgradeCount++;
+        this.updateScore();
+        this.saveState();
     }
 
     doubleClickValue() {
-        if (this.score >= this.doubleClickValueCost) {
-            this.score -= this.doubleClickValueCost;
-            this.clickValue *= 2;
-            this.updateScore();
+        if (this.doubleClickValuePurchased || this.score < this.doubleClickValueCost) {
+            return;
         }
+
+        this.score -= this.doubleClickValueCost;
+        this.clickValue *= 2;
+        this.doubleClickValuePurchased = true;
+        this.updateScore();
+        this.saveState();
     }
 
     scoreMultiplier() {
-        if (this.score >= this.scoreMultiplierCost) {
-            this.score -= this.scoreMultiplierCost;
-            this.clickValue *= 3;
-            this.updateScore();
+        if (this.scoreMultiplierPurchased || this.score < this.scoreMultiplierCost) {
+            return;
         }
+
+        this.score -= this.scoreMultiplierCost;
+        this.clickValue *= 3;
+        this.scoreMultiplierPurchased = true;
+        this.updateScore();
+        this.saveState();
     }
 
-    extraBonus() {
-        if (this.score >= this.extraBonusCost) {
-            this.score -= this.extraBonusCost;
-            this.score += 500;
-            this.updateScore();
+    megaKlik() {
+        if (this.megaKlikPurchased || this.score < this.megaKlikCost) {
+            return;
         }
+
+        this.score -= this.megaKlikCost;
+        this.megaKlikPurchased = true;
+        this.updateScore();
+        this.saveState();
     }
 
-    speedBoost() {
-        if (this.score >= this.speedBoostCost && !this.isSpeedBoostActive) {
-            this.score -= this.speedBoostCost;
-            this.isSpeedBoostActive = true;
-            this.clickValue += 5;
-            this.updateScore();
-            setTimeout(() => {
-                this.clickValue -= 5;
-                this.isSpeedBoostActive = false;
-                this.updateUI();
-            }, 10000);
+    comboClicker() {
+        if (this.comboClickerPurchased || this.score < this.comboClickerCost) {
+            return;
         }
+
+        this.score -= this.comboClickerCost;
+        this.comboClickerPurchased = true;
+        this.updateScore();
+        this.saveState();
     }
 
     reset() {
@@ -293,6 +376,14 @@ class CookieClicker {
         this.clickValue = 1;
         this.upgradeCost = 10;
         this.upgradeCount = 0;
+        this.upgradePurchased = false;
+        this.doubleClickValuePurchased = false;
+        this.scoreMultiplierPurchased = false;
+        this.megaKlikPurchased = false;
+        this.comboClickerPurchased = false;
+        this.clickCount = 0;
+        this.lastClickTime = 0;
+        this.comboChain = 0;
         this.buildings.forEach(function(building) {
             building.count = 0;
             building.cost = building.baseCost;
@@ -313,11 +404,14 @@ class CookieClicker {
     }
 
     updateUpgrade() {
-        this.upgradeButton.textContent = 'Upgrade (' + this.beautifyCookies(this.upgradeCost) + ')';
+        if (this.upgradeButton) {
+            this.upgradeButton.textContent = 'Upgrade (' + this.beautifyCookies(this.upgradeCost) + ')';
+        }
         this.upgradeCountElement.textContent = this.upgradeCount;
         localStorage.setItem('clickValue', this.clickValue);
         localStorage.setItem('upgradeCost', this.upgradeCost);
         localStorage.setItem('upgradeCount', this.upgradeCount);
+        localStorage.setItem('upgradePurchased', this.upgradePurchased ? 'true' : 'false');
     }
 
     saveState() {
@@ -325,6 +419,12 @@ class CookieClicker {
         localStorage.setItem('clickValue', this.clickValue);
         localStorage.setItem('upgradeCost', this.upgradeCost);
         localStorage.setItem('upgradeCount', this.upgradeCount);
+        localStorage.setItem('upgradePurchased', this.upgradePurchased ? 'true' : 'false');
+        localStorage.setItem('doubleClickValuePurchased', this.doubleClickValuePurchased ? 'true' : 'false');
+        localStorage.setItem('scoreMultiplierPurchased', this.scoreMultiplierPurchased ? 'true' : 'false');
+        localStorage.setItem('megaKlikPurchased', this.megaKlikPurchased ? 'true' : 'false');
+        localStorage.setItem('comboClickerPurchased', this.comboClickerPurchased ? 'true' : 'false');
+        localStorage.setItem('clickCount', this.clickCount);
         localStorage.setItem('cps', this.cps);
         for (var i = 0; i < this.buildings.length; i++) {
             localStorage.setItem('building_' + i, this.buildings[i].count);

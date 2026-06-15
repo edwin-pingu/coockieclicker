@@ -27,8 +27,8 @@
                     <button id="upgradeButton">Upgrade (10)</button>
                     <button id="doubleClickValueButton">Double Click Value (150)</button>
                     <button id="scoreMultiplierButton">Score Multiplier x3 (500)</button>
-                    <button id="extraBonusButton">Extra Bonus (300)</button>
-                    <button id="speedBoostButton">Speed Boost (250)</button>
+                    <button id="megaKlikButton">Mega Klik (300)</button>
+                    <button id="comboClickerButton">Combo Clicker (250)</button>
                     <button id="resetButton">Reset</button>
                 </div>
             </main>
