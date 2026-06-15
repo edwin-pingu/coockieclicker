@@ -29,8 +29,6 @@
                     <button id="scoreMultiplierButton">Score Multiplier x3 (500)</button>
                     <button id="extraBonusButton">Extra Bonus (300)</button>
                     <button id="speedBoostButton">Speed Boost (250)</button>
-                    <button id="autoClickerButton">Auto Clicker (100)</button>
-                    <button id="disableAutoClickerButton" style="display:none;">Disable Auto Clicker</button>
                     <button id="resetButton">Reset</button>
                 </div>
             </main>
@@ -66,7 +64,6 @@
                 <div class="panel">
                     <h2>Overzicht</h2>
                     <p>Upgrades: <span id="upgradeCount">0</span></p>
-                    <p>Auto Clickers: <span id="autoClickerCount">0</span></p>
                 </div>
             </aside>
         </div>
